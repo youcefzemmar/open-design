@@ -74,6 +74,7 @@ import {
 import {
   apiProtocolAgentId,
   apiProtocolModelLabel,
+  usesAnthropicProxy,
 } from '../utils/apiProtocol';
 import { playSound, showCompletionNotification } from '../utils/notifications';
 import { randomUUID } from '../utils/uuid';
@@ -2861,6 +2862,7 @@ export function ProjectView({
           userMsg.id,
           project.id,
           projectFiles,
+          { omitNativeImageAttachments: usesAnthropicProxy(config) },
         );
         pushEvent({ kind: 'status', label: 'requesting', detail: config.model });
         let accumulatedAssistantText = '';
