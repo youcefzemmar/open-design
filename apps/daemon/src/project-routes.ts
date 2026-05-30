@@ -32,7 +32,7 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
   const { listLatestProjectRunStatuses, listProjectsAwaitingInput, normalizeProjectDisplayStatus, composeProjectDisplayStatus, listProjects } = ctx.status;
   const { subscribeFileEvents, activeProjectEventSinks } = ctx.events;
   const { randomId } = ctx.ids;
-  const { validateProjectDesignSystemId } = ctx.validation;
+  const { validateProjectDesignSystemId, validateProjectSkillId } = ctx.validation;
   async function loadPluginRegistryView() {
     const [skills, designSystems] = await Promise.all([
       listSkills(SKILLS_DIR),
@@ -181,6 +181,11 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
         );
       }
       const normalizedDesignSystemId = designSystemValidation.id;
+      const skillValidation = await validateProjectSkillId(skillId);
+      if (!skillValidation.ok) {
+        return sendApiError(res, 400, skillValidation.code, skillValidation.message);
+      }
+      const normalizedSkillId = skillValidation.id;
       const projectMetadata =
         metadata && typeof metadata === 'object'
           ? {
@@ -200,7 +205,7 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
       const project = insertProject(db, {
         id,
         name: name.trim(),
-        skillId: skillId ?? null,
+        skillId: normalizedSkillId,
         designSystemId: normalizedDesignSystemId,
         pendingPrompt: pendingPrompt || null,
         metadata: projectMetadata,
@@ -402,6 +407,13 @@ export function registerProjectRoutes(app: Express, ctx: RegisterProjectRoutesDe
           );
         }
         patch.designSystemId = designSystemValidation.id;
+      }
+      if (Object.prototype.hasOwnProperty.call(patch, 'skillId')) {
+        const skillValidation = await validateProjectSkillId(patch.skillId);
+        if (!skillValidation.ok) {
+          return sendApiError(res, 400, skillValidation.code, skillValidation.message);
+        }
+        patch.skillId = skillValidation.id;
       }
       const project = updateProject(db, req.params.id, patch);
       if (!project)
